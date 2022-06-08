@@ -7,12 +7,29 @@ const Client = require('../models/Client');
 const {
   GraphQLObjectType,
   GraphQLID,
-  GraphQLSchema,
   GraphQLString,
+  GraphQLSchema,
   GraphQLList,
   GraphQLNonNull,
   GraphQLEnumType,
 } = require('graphql');
+
+// Project Type
+const ProjectType = new GraphQLObjectType({
+  name: 'Project',
+  fields: () => ({
+    id: { type: GraphQLID },
+    name: { type: GraphQLString },
+    description: { type: GraphQLString },
+    status: { type: GraphQLString },
+    client: {
+      type: ClientType,
+      resolve(parent, args) {
+        return Client.findById(parent.clientId);
+      },
+    },
+  }),
+});
 
 // Client Type
 const ClientType = new GraphQLObjectType({
@@ -25,24 +42,6 @@ const ClientType = new GraphQLObjectType({
   }),
 });
 
-//Project Type
-const ProjectType = new GraphQLObjectType({
-  name: 'Project',
-  fields: () => ({
-    id: { type: GraphQLID },
-    name: { type: GraphQLString },
-    description: { type: GraphQLString },
-    status: { type: GraphQLString },
-    client: {
-      type: ClientType,
-      resolve(parent, args) {
-        // return clients.find((client) => client.id === parent.clientId);
-        return Client.findById(parent.clientId);
-      },
-    },
-  }),
-});
-
 const RootQuery = new GraphQLObjectType({
   name: 'RootQueryType',
   fields: {
@@ -52,7 +51,6 @@ const RootQuery = new GraphQLObjectType({
         return Project.find();
       },
     },
-
     project: {
       type: ProjectType,
       args: { id: { type: GraphQLID } },
@@ -60,30 +58,27 @@ const RootQuery = new GraphQLObjectType({
         return Project.findById(args.id);
       },
     },
-
     clients: {
       type: new GraphQLList(ClientType),
       resolve(parent, args) {
         return Client.find();
       },
     },
-
     client: {
       type: ClientType,
       args: { id: { type: GraphQLID } },
       resolve(parent, args) {
-        // return client.find((client) => client.id === args.id);
         return Client.findById(args.id);
       },
     },
   },
 });
 
-//Mutations
-const myMutation = new GraphQLObjectType({
+// Mutations
+const mutation = new GraphQLObjectType({
   name: 'Mutation',
   fields: {
-    //add Client
+    // Add a client
     addClient: {
       type: ClientType,
       args: {
@@ -97,22 +92,27 @@ const myMutation = new GraphQLObjectType({
           email: args.email,
           phone: args.phone,
         });
+
         return client.save();
       },
     },
-
-    //delete Client
+    // Delete a client
     deleteClient: {
       type: ClientType,
       args: {
         id: { type: GraphQLNonNull(GraphQLID) },
       },
       resolve(parent, args) {
+        Project.find({ clientId: args.id }).then((projects) => {
+          projects.forEach((project) => {
+            project.remove();
+          });
+        });
+
         return Client.findByIdAndRemove(args.id);
       },
     },
-
-    //Add a project
+    // Add a project
     addProject: {
       type: ProjectType,
       args: {
@@ -134,15 +134,15 @@ const myMutation = new GraphQLObjectType({
       resolve(parent, args) {
         const project = new Project({
           name: args.name,
-          description: args.descripion,
+          description: args.description,
           status: args.status,
           clientId: args.clientId,
         });
+
         return project.save();
       },
     },
-
-    //Delete a project
+    // Delete a project
     deleteProject: {
       type: ProjectType,
       args: {
@@ -152,7 +152,6 @@ const myMutation = new GraphQLObjectType({
         return Project.findByIdAndRemove(args.id);
       },
     },
-
     // Update a project
     updateProject: {
       type: ProjectType,
@@ -177,7 +176,7 @@ const myMutation = new GraphQLObjectType({
           {
             $set: {
               name: args.name,
-              descripion: args.description,
+              description: args.description,
               status: args.status,
             },
           },
@@ -190,5 +189,5 @@ const myMutation = new GraphQLObjectType({
 
 module.exports = new GraphQLSchema({
   query: RootQuery,
-  mutation: myMutation,
+  mutation,
 });
