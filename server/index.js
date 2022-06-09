@@ -7,7 +7,6 @@ const path = require('path');
 const { graphqlHTTP } = require('express-graphql');
 const schema = require('./schema/schema');
 const connectDB = require('./config/db');
-const port = process.env.PORT || 4711;
 
 const app = express();
 
@@ -31,6 +30,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
 
-const PORT = process.env.PORT || 4711;
+const port = process.env.PORT || 4711;
 
 app.listen(port, console.log(`Server running on port ${port}`));
